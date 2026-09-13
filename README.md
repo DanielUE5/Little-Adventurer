@@ -2,6 +2,9 @@
 
 Little Adventurer is a 2D pixel-art action platformer prototype built with Unity. Take control of a nimble adventurer, move through the level, and fight Skeleton Knights using responsive platforming and melee combat.
 
+> [!IMPORTANT]
+> **Development status:** Little Adventurer is still a work in progress. The current public build does not yet include a win condition or a level-completion screen.
+
 ## Play in your browser
 
 No download, installation, or repository clone is required. Play the current public WebGL build directly on itch.io:
