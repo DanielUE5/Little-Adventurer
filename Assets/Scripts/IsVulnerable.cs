@@ -152,6 +152,7 @@ public class IsVulnerable : MonoBehaviour
         }
 
         onDeath?.Invoke();
+        CharacterEventsHandler.characterDied?.Invoke(gameObject);
     }
 
     public void ResetHurt()

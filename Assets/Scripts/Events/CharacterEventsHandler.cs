@@ -10,4 +10,5 @@ public class CharacterEventsHandler
 {
     public static UnityAction<GameObject, int> damageTaken;
     public static UnityAction<GameObject, int> healed;
+    public static UnityAction<GameObject> characterDied;
 }
