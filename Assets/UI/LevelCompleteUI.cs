@@ -15,9 +15,11 @@ public class LevelCompleteUI : MonoBehaviour
 {
     private const string FirstLevelScene = "GeneralScene";
     private readonly HashSet<int> livingSkeletons = new HashSet<int>();
+    private readonly Dictionary<RectTransform, Coroutine> buttonHoverAnimations = new Dictionary<RectTransform, Coroutine>();
 
     private CanvasGroup victoryGroup;
     private RectTransform victoryCard;
+    private TMP_FontAsset levelFont;
     private bool levelCompleted;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -117,6 +119,10 @@ public class LevelCompleteUI : MonoBehaviour
 
     private void BuildVictoryScreen()
     {
+        TMP_Text existingText = FindObjectOfType<TMP_Text>();
+        if (existingText != null)
+            levelFont = existingText.font;
+
         GameObject root = CreateUIObject("Victory Screen", transform);
         Canvas canvas = root.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
@@ -130,20 +136,23 @@ public class LevelCompleteUI : MonoBehaviour
         victoryGroup = root.AddComponent<CanvasGroup>();
         victoryGroup.alpha = 0f;
 
-        Image dimmer = CreateImage("Backdrop", root.transform, new Color32(5, 8, 18, 215));
+        Image dimmer = CreateImage("Backdrop", root.transform, new Color32(28, 17, 29, 218));
         Stretch(dimmer.rectTransform);
 
-        Image glow = CreateImage("Card Glow", root.transform, new Color32(45, 212, 191, 35));
+        Image glow = CreateImage("Card Glow", root.transform, new Color32(85, 205, 67, 38));
         SetCenteredRect(glow.rectTransform, new Vector2(780f, 520f), new Vector2(0f, -10f));
 
-        Image shadow = CreateImage("Card Shadow", root.transform, new Color32(0, 0, 0, 125));
+        Image shadow = CreateImage("Card Shadow", root.transform, new Color32(12, 7, 13, 165));
         SetCenteredRect(shadow.rectTransform, new Vector2(690f, 440f), new Vector2(12f, -18f));
 
-        Image card = CreateImage("Victory Card", root.transform, new Color32(19, 27, 45, 250));
+        Image card = CreateImage("Victory Card", root.transform, new Color32(49, 30, 42, 252));
         victoryCard = card.rectTransform;
         SetCenteredRect(victoryCard, new Vector2(690f, 440f), Vector2.zero);
+        Outline cardOutline = card.gameObject.AddComponent<Outline>();
+        cardOutline.effectColor = new Color32(116, 76, 69, 255);
+        cardOutline.effectDistance = new Vector2(4f, -4f);
 
-        Image accent = CreateImage("Top Accent", card.transform, new Color32(45, 212, 191, 255));
+        Image accent = CreateImage("Top Accent", card.transform, new Color32(83, 202, 62, 255));
         RectTransform accentRect = accent.rectTransform;
         accentRect.anchorMin = new Vector2(0f, 1f);
         accentRect.anchorMax = Vector2.one;
@@ -151,14 +160,22 @@ public class LevelCompleteUI : MonoBehaviour
         accentRect.offsetMin = new Vector2(0f, -8f);
         accentRect.offsetMax = Vector2.zero;
 
-        TMP_Text eyebrow = CreateText("Status", card.transform, "LEVEL 1 COMPLETE", 24f, new Color32(45, 212, 191, 255), FontStyles.Bold);
+        Image skyAccent = CreateImage("Sky Accent", card.transform, new Color32(104, 189, 240, 255));
+        RectTransform skyAccentRect = skyAccent.rectTransform;
+        skyAccentRect.anchorMin = new Vector2(0f, 1f);
+        skyAccentRect.anchorMax = Vector2.one;
+        skyAccentRect.pivot = new Vector2(0.5f, 1f);
+        skyAccentRect.offsetMin = new Vector2(0f, -12f);
+        skyAccentRect.offsetMax = new Vector2(0f, -8f);
+
+        TMP_Text eyebrow = CreateText("Status", card.transform, "LEVEL 1 COMPLETE", 24f, new Color32(164, 220, 247, 255), FontStyles.Bold);
         SetCenteredRect(eyebrow.rectTransform, new Vector2(600f, 45f), new Vector2(0f, 132f));
         eyebrow.characterSpacing = 5f;
 
-        TMP_Text title = CreateText("Title", card.transform, "VICTORY!", 72f, Color.white, FontStyles.Bold);
+        TMP_Text title = CreateText("Title", card.transform, "VICTORY!", 72f, new Color32(255, 239, 193, 255), FontStyles.Bold);
         SetCenteredRect(title.rectTransform, new Vector2(620f, 95f), new Vector2(0f, 65f));
 
-        TMP_Text message = CreateText("Message", card.transform, "All skeletons have been defeated.", 28f, new Color32(190, 201, 220, 255), FontStyles.Normal);
+        TMP_Text message = CreateText("Message", card.transform, "All skeletons have been defeated.", 28f, new Color32(224, 202, 169, 255), FontStyles.Normal);
         SetCenteredRect(message.rectTransform, new Vector2(620f, 55f), new Vector2(0f, -5f));
 
         GameObject buttons = CreateUIObject("Actions", card.transform);
@@ -172,31 +189,112 @@ public class LevelCompleteUI : MonoBehaviour
         layout.childForceExpandWidth = true;
         layout.childForceExpandHeight = true;
 
-        CreateButton("Play Again", buttons.transform, "PLAY AGAIN", new Color32(45, 212, 191, 255), new Color32(10, 30, 32, 255), PlayAgain);
-        CreateButton("Quit", buttons.transform, "QUIT", new Color32(40, 50, 70, 255), Color.white, QuitGame);
+        CreateButton(
+            "Play Again",
+            buttons.transform,
+            "PLAY AGAIN",
+            new Color32(74, 176, 57, 255),
+            new Color32(104, 218, 76, 255),
+            new Color32(38, 25, 35, 255),
+            new Color32(193, 226, 127, 255),
+            PlayAgain);
+        CreateButton(
+            "Quit",
+            buttons.transform,
+            "QUIT",
+            new Color32(112, 70, 64, 255),
+            new Color32(151, 94, 78, 255),
+            new Color32(255, 239, 193, 255),
+            new Color32(229, 177, 119, 255),
+            QuitGame);
 
         root.SetActive(false);
     }
 
-    private static Button CreateButton(string name, Transform parent, string label, Color background, Color foreground, UnityEngine.Events.UnityAction action)
+    private Button CreateButton(
+        string name,
+        Transform parent,
+        string label,
+        Color background,
+        Color highlightedBackground,
+        Color foreground,
+        Color hoverOutline,
+        UnityEngine.Events.UnityAction action)
     {
-        Image image = CreateImage(name, parent, background);
+        Image image = CreateImage(name, parent, Color.white);
+        image.raycastTarget = true;
         Button button = image.gameObject.AddComponent<Button>();
         button.targetGraphic = image;
         button.onClick.AddListener(action);
 
         ColorBlock colors = button.colors;
         colors.normalColor = background;
-        colors.highlightedColor = Color.Lerp(background, Color.white, 0.15f);
+        colors.highlightedColor = highlightedBackground;
         colors.pressedColor = Color.Lerp(background, Color.black, 0.18f);
-        colors.selectedColor = colors.highlightedColor;
-        colors.fadeDuration = 0.08f;
+        colors.selectedColor = highlightedBackground;
+        colors.disabledColor = new Color(background.r, background.g, background.b, 0.45f);
+        colors.fadeDuration = 0.1f;
         button.colors = colors;
+
+        Outline outline = image.gameObject.AddComponent<Outline>();
+        outline.effectColor = new Color(hoverOutline.r, hoverOutline.g, hoverOutline.b, 0f);
+        outline.effectDistance = new Vector2(2f, -2f);
 
         TMP_Text text = CreateText("Label", image.transform, label, 25f, foreground, FontStyles.Bold);
         Stretch(text.rectTransform);
         text.characterSpacing = 2f;
+
+        EventTrigger trigger = image.gameObject.AddComponent<EventTrigger>();
+        AddTrigger(trigger, EventTriggerType.PointerEnter, _ => SetButtonHover(image.rectTransform, outline, hoverOutline, true));
+        AddTrigger(trigger, EventTriggerType.PointerExit, _ => SetButtonHover(image.rectTransform, outline, hoverOutline, false));
+        AddTrigger(trigger, EventTriggerType.Select, _ => SetButtonHover(image.rectTransform, outline, hoverOutline, true));
+        AddTrigger(trigger, EventTriggerType.Deselect, _ => SetButtonHover(image.rectTransform, outline, hoverOutline, false));
         return button;
+    }
+
+    private static void AddTrigger(EventTrigger trigger, EventTriggerType type, UnityEngine.Events.UnityAction<BaseEventData> callback)
+    {
+        EventTrigger.Entry entry = new EventTrigger.Entry { eventID = type };
+        entry.callback.AddListener(callback);
+        trigger.triggers.Add(entry);
+    }
+
+    private void SetButtonHover(RectTransform buttonRect, Outline outline, Color hoverOutline, bool hovered)
+    {
+        if (buttonHoverAnimations.TryGetValue(buttonRect, out Coroutine currentAnimation))
+            StopCoroutine(currentAnimation);
+
+        buttonHoverAnimations[buttonRect] = StartCoroutine(AnimateButtonHover(buttonRect, outline, hoverOutline, hovered));
+    }
+
+    private IEnumerator AnimateButtonHover(RectTransform buttonRect, Outline outline, Color hoverOutline, bool hovered)
+    {
+        const float duration = 0.12f;
+        float elapsed = 0f;
+        Vector3 startScale = buttonRect.localScale;
+        Vector3 targetScale = Vector3.one * (hovered ? 1.055f : 1f);
+        Color startOutline = outline.effectColor;
+        Color targetOutline = hovered
+            ? hoverOutline
+            : new Color(hoverOutline.r, hoverOutline.g, hoverOutline.b, 0f);
+        Vector2 startDistance = outline.effectDistance;
+        Vector2 targetDistance = hovered ? new Vector2(3f, -3f) : new Vector2(2f, -2f);
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float progress = Mathf.Clamp01(elapsed / duration);
+            float eased = 1f - Mathf.Pow(1f - progress, 3f);
+            buttonRect.localScale = Vector3.LerpUnclamped(startScale, targetScale, eased);
+            outline.effectColor = Color.LerpUnclamped(startOutline, targetOutline, eased);
+            outline.effectDistance = Vector2.LerpUnclamped(startDistance, targetDistance, eased);
+            yield return null;
+        }
+
+        buttonRect.localScale = targetScale;
+        outline.effectColor = targetOutline;
+        outline.effectDistance = targetDistance;
+        buttonHoverAnimations.Remove(buttonRect);
     }
 
     private static GameObject CreateUIObject(string name, Transform parent)
@@ -211,13 +309,16 @@ public class LevelCompleteUI : MonoBehaviour
         GameObject result = CreateUIObject(name, parent);
         Image image = result.AddComponent<Image>();
         image.color = color;
+        image.raycastTarget = false;
         return image;
     }
 
-    private static TMP_Text CreateText(string name, Transform parent, string content, float size, Color color, FontStyles style)
+    private TMP_Text CreateText(string name, Transform parent, string content, float size, Color color, FontStyles style)
     {
         GameObject result = CreateUIObject(name, parent);
         TextMeshProUGUI text = result.AddComponent<TextMeshProUGUI>();
+        if (levelFont != null)
+            text.font = levelFont;
         text.text = content;
         text.fontSize = size;
         text.color = color;
